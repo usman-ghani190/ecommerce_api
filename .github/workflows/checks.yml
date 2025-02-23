@@ -25,7 +25,7 @@ jobs:
 
       - name: Run Migrations
         run: python manage.py migrate
-        working-directory: /app
+        working-directory: app
 
       - name: Run Linting
         run: |
