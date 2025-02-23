@@ -24,8 +24,8 @@ jobs:
           pip install flake8  # Install Flake8 for linting
 
       - name: Run Migrations
-        run: |
-          python manage.py migrate
+        run: python manage.py migrate
+        working-directory: ecommerce_api/app
 
       - name: Run Linting
         run: |
