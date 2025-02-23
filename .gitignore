@@ -1,0 +1,61 @@
+# 💾 Ignore SQLite database
+db.sqlite3
+*.sqlite3
+
+# 🗄️ Ignore Django migrations compiled files
+**/migrations/*.pyc
+**/migrations/__pycache__/
+
+# 📦 Ignore virtual environment
+venv/
+env/
+.venv/
+.env/
+
+# 🔍 Ignore IDE/editor files
+.vscode/
+.idea/
+*.sublime-workspace
+
+# 📝 Ignore Python bytecode
+*.pyc
+*.pyo
+*.pyd
+__pycache__/
+
+# 🚀 Ignore environment variables & secrets
+.env
+*.env
+
+# 📂 Ignore logs & temp files
+*.log
+*.pot
+*.pid
+*.swp
+*.swo
+*.DS_Store
+*.pyc
+
+# 🛠️ Ignore dependency-related files
+pip-log.txt
+pip-delete-this-directory.txt
+
+# 🚧 Ignore coverage reports
+.coverage
+htmlcov/
+*.cover
+*.py,cover
+.cache
+
+# 🛠️ Ignore test and profiling files
+.tox/
+nosetests.xml
+coverage.xml
+*.cover
+*.hypothesis/
+
+# 🛠️ Ignore Pytest cache
+.pytest_cache/
+
+# 🔹 Ignore Flake8 cache
+.flake8
