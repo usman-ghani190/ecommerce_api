@@ -1,3 +1,4 @@
+from decimal import Decimal
 from django.test import TestCase
 from core.models import Product
 
@@ -8,7 +9,7 @@ class ProductModelTest(TestCase):
         self.product = Product.objects.create(
             name="Test Product",
             description="This is a test product.",
-            price=99.99,
+            price=Decimal('99.99'),
             stock=10,
             category="Electronics",
             image=None,  # No image for this test
@@ -18,7 +19,7 @@ class ProductModelTest(TestCase):
         """Test that a Product instance is created successfully."""
         self.assertEqual(self.product.name, "Test Product")
         self.assertEqual(self.product.description, "This is a test product.")
-        self.assertEqual(self.product.price, 99.99)
+        self.assertEqual(self.product.price, Decimal('99.99'))
         self.assertEqual(self.product.stock, 10)
         self.assertEqual(self.product.category, "Electronics")
 
