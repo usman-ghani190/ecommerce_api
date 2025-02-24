@@ -5,6 +5,10 @@ from django.urls import reverse
 from django.test import Client
 
 
+LISTED_USERS_URL = reverse('admin:core_user_changelist')
+CREATE_USER_URL = reverse('admin:core_user_add')
+
+
 class AdminSiteTests(TestCase):
     """Test for Django admin site."""
     def setUp(self):
@@ -23,8 +27,7 @@ class AdminSiteTests(TestCase):
 
     def test_users_listed(self):
         """Test that users are listed on user page."""
-        url = reverse('admin:core_user_changelist')
-        res = self.client.get(url)
+        res = self.client.get(LISTED_USERS_URL)
 
         self.assertContains(res, self.user.name)
         self.assertContains(res, self.user.email)
@@ -38,7 +41,6 @@ class AdminSiteTests(TestCase):
 
     def test_create_user_page(self):
         """Test that the create user page works."""
-        url = reverse('admin:core_user_add')
-        res = self.client.get(url)
+        res = self.client.get(CREATE_USER_URL)
 
         self.assertEqual(res.status_code, 200)

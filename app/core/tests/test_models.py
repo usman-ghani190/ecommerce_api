@@ -1,12 +1,19 @@
 from decimal import Decimal
 from django.test import TestCase
+from django.contrib.auth import get_user_model
 from core.models import Product
 
 
 class ProductModelTest(TestCase):
     def setUp(self):
-        """Create a sample product for testing."""
+        """Create a sample user and product for testing."""
+        self.user = get_user_model().objects.create_user(
+            email="test@example.com",
+            password="testpass123"
+        )
+
         self.product = Product.objects.create(
+            user=self.user,  # Associate the product with a user
             name="Test Product",
             description="This is a test product.",
             price=Decimal('99.99'),
@@ -17,6 +24,7 @@ class ProductModelTest(TestCase):
 
     def test_product_creation(self):
         """Test that a Product instance is created successfully."""
+        self.assertEqual(self.product.user, self.user)  # Ensure user is set
         self.assertEqual(self.product.name, "Test Product")
         self.assertEqual(self.product.description, "This is a test product.")
         self.assertEqual(self.product.price, Decimal('99.99'))

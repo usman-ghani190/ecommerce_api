@@ -1,12 +1,11 @@
 """Django models"""
 
+from django.conf import settings
 from django.db import models
 from django.contrib.auth.models import (
     AbstractBaseUser,
     BaseUserManager,
     PermissionsMixin,)
-
-# Create your models here.
 
 
 class UserManager(BaseUserManager):
@@ -42,12 +41,18 @@ class User(AbstractBaseUser, PermissionsMixin):
 
 
 class Product(models.Model):
+    """Product object"""
+    user = models.ForeignKey(
+     settings.AUTH_USER_MODEL,
+     on_delete=models.CASCADE,
+    )
     name = models.CharField(max_length=255)
     description = models.TextField()
     price = models.DecimalField(max_digits=10, decimal_places=2)
     stock = models.PositiveIntegerField()
     category = models.CharField(max_length=100)
     image = models.ImageField(upload_to="products/", blank=True, null=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
 
     def __str__(self):
         return self.name
