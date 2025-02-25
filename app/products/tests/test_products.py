@@ -177,8 +177,8 @@ class PrivateProductAPITests(TestCase):
             'description': 'new description',
             'price': Decimal('30.00'),
             'stock': 5,
-            'category': 'Updated Category',  # Include category in payload
-            'tags': [{'name': 'Updated Tag'}],  # Include tags in payload
+            'category': 'Updated Category',
+            'tags': [{'name': 'Updated Tag'}],
         }
         url = detail_url(product.id)
         res = self.client.put(url, payload, format='json')

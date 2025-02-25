@@ -42,9 +42,17 @@ class TagViewSet(viewsets.ModelViewSet):
     """Manage tags in the database."""
     serializer_class = serializers.TagSerializer
     queryset = Tag.objects.all()
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        """Return tags for the authenticated user only"""
+        return self.queryset.filter(user=self.request.user).order_by('-name')
 
 
 class CategoryViewSet(viewsets.ModelViewSet):
     """Manage categories in database."""
     serializer_class = serializers.CategorySerializer
     queryset = Category.objects.all()
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
