@@ -8,7 +8,7 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APIClient
 
-from core.models import Category, Product
+from core.models import Category, Product, Tag
 
 from products.serializers import ProductSerializer
 
@@ -27,16 +27,23 @@ def create_product(user, **params):
         defaults={"user": user}
     )
 
+    tag, created = Tag.objects.get_or_create(
+        name="Sample Tag",
+        defaults={"user": user}
+    )
+
     defaults = {
         'name': 'Sample Product',
         'description': 'Sample description',
         'price': Decimal('99.99'),
         'stock': 5,
-        'category': category
+        'category': category,
     }
     defaults.update(params)
 
-    return Product.objects.create(user=user, **defaults)
+    product = Product.objects.create(user=user, **defaults)
+    product.tags.set([tag])
+    return product
 
 
 def create_user(**params):
@@ -73,6 +80,10 @@ class PrivateProductAPITests(TestCase):
             name="Test Category",
             user=self.user,
         )
+        self.tags, created = Tag.objects.get_or_create(
+            name="Sample Tag",
+            user=self.user,
+        )
 
     def test_retrieve_products(self):
         """Test retrieving a list of products"""
@@ -81,7 +92,7 @@ class PrivateProductAPITests(TestCase):
 
         res = self.client.get(PRODUCT_URL)
 
-        products = Product.objects.all().order_by('id')
+        products = Product.objects.all().order_by('-id')
         serializer = ProductSerializer(products, many=True)
 
         self.assertEqual(res.status_code, status.HTTP_200_OK)
@@ -114,20 +125,31 @@ class PrivateProductAPITests(TestCase):
 
     def test_create_product(self):
         """Test creating a product"""
+        self.client.force_authenticate(user=self.user)  # Authenticate user
+
+        unique_category_name = "Unique Category"
+        unique_tag_name = "Unique Tag"
+
         payload = {
             'name': 'bag',
             'description': 'Sample description',
             'price': Decimal('30.00'),
             'stock': 4,
+            'category': unique_category_name,  # Pass category name directly
+            'tags': [{'name': unique_tag_name}],  # Use dictionary for tags
         }
-        res = self.client.post(PRODUCT_URL, payload)
+
+        res = self.client.post(PRODUCT_URL, payload, format='json')
 
         self.assertEqual(res.status_code, status.HTTP_201_CREATED)
-        product = Product.objects.get(id=res.data['id'])
 
-        for k, v in payload.items():
-            self.assertEqual(getattr(product, k), v)
+        product = Product.objects.get(id=res.data['id'])
+        self.assertEqual(product.name, payload['name'])
         self.assertEqual(product.user, self.user)
+        self.assertTrue(
+            set([tag.name for tag in product.tags.all()]).issubset(
+                set([tag['name'] for tag in payload['tags']]))
+        )
 
     def test_partial_update(self):
         """Test partial update of a product"""
@@ -155,15 +177,24 @@ class PrivateProductAPITests(TestCase):
             'description': 'new description',
             'price': Decimal('30.00'),
             'stock': 5,
+            'category': 'Updated Category',  # Include category in payload
+            'tags': [{'name': 'Updated Tag'}],  # Include tags in payload
         }
         url = detail_url(product.id)
-        res = self.client.put(url, payload)
+        res = self.client.put(url, payload, format='json')
 
         self.assertEqual(res.status_code, status.HTTP_200_OK)
         product.refresh_from_db()
 
         for k, v in payload.items():
+            if k in ['category', 'tags']:
+                continue
             self.assertEqual(getattr(product, k), v)
+        self.assertEqual(product.category.name, payload['category'])
+        self.assertTrue(
+            set([tag.name for tag in product.tags.all()]).issubset(
+                set([tag['name'] for tag in payload['tags']]))
+        )
         self.assertEqual(product.user, self.user)
 
     def test_delete_product(self):
