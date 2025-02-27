@@ -1,5 +1,6 @@
 """Test for Tag API."""
 
+from decimal import Decimal
 from django.urls import reverse
 from django.contrib.auth import get_user_model
 from django.test import TestCase
@@ -7,7 +8,7 @@ from django.test import TestCase
 from rest_framework import status
 from rest_framework.test import APIClient
 
-from core.models import Tag
+from core.models import Product, Tag
 
 from products.serializers import TagSerializer
 
@@ -46,6 +47,18 @@ class PrivateTagAPITest(TestCase):
         self.client = APIClient()
         self.client.force_authenticate(self.user)
 
+    def test_create_tag_successful(self):
+        """Test creating a tag is successful"""
+        payload = {'name': 'sample tag'}
+
+        res = self.client.post(TAGS_URL, payload)
+
+        self.assertEqual(res.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(Tag.objects.count(), 1)
+        tag = Tag.objects.get()
+        self.assertEqual(tag.name, payload['name'])
+        self.assertEqual(tag.user, self.user)
+
     def test_retrieve_tags(self):
         """Test for retreiving list of Tags API"""
         Tag.objects.create(user=self.user, name='Weekly best products')
@@ -75,3 +88,50 @@ class PrivateTagAPITest(TestCase):
         self.assertEqual(len(res.data), 1)
         self.assertEqual(res.data[0]['name'], tag.name)
         self.assertEqual(res.data[0]['id'], tag.id)
+
+    def test_update_tag(self):
+        """Test update tag."""
+        tag = Tag.objects.create(user=self.user, name='kichen')
+
+        payload = {'name': 'New kichen products'}
+        url = detail_url(tag.id)
+
+        res = self.client.patch(url, payload)
+
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        tag.refresh_from_db()
+        self.assertEqual(tag.name, payload['name'])
+
+    def test_delete_tag(self):
+        """Test deleting a tag."""
+        tag = Tag.objects.create(user=self.user, name='sample tag')
+
+        url = detail_url(tag.id)
+        res = self.client.delete(url)
+
+        self.assertEqual(res.status_code, status.HTTP_204_NO_CONTENT)
+        tags = Tag.objects.filter(user=self.user)
+        self.assertFalse(tags.exists())
+
+    def test_filter_tag_assigned_to_product(self):
+        """Test listing tags to those assigned to product."""
+        tag1 = Tag.objects.create(user=self.user, name='Meal')
+        tag2 = Tag.objects.create(user=self.user, name='Shoes')
+        product = Product.objects.create(
+            user=self.user,
+            name="Sample Product",
+            description="This is a test product.",
+            price=Decimal('99.99'),
+            stock=10,
+            image=None,
+        )
+        product.tags.add(tag1)
+
+        res = self.client.get(TAGS_URL, {'assigned_only': 1})
+
+        s1 = TagSerializer(tag1)
+        s2 = TagSerializer(tag2)
+
+        self.assertIn(s1.data, res.data)
+        self.assertNotIn(s2.data, res.data)
+        self.assertEqual(len(res.data), 1)

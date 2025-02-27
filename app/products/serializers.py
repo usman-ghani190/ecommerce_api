@@ -9,8 +9,8 @@ class TagSerializer(serializers.ModelSerializer):
     """Serializer for Tag"""
     class Meta:
         model = Tag
-        fields = ['id', 'name']
-        read_only_fields = ['id']
+        fields = ['id', 'name', 'user']
+        read_only_fields = ['id', 'user']
 
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -24,8 +24,8 @@ class CategorySerializer(serializers.ModelSerializer):
 class ProductSerializer(serializers.ModelSerializer):
     """Serializer for Product."""
 
-    category = serializers.CharField()
-    tags = TagSerializer(many=True)  # Use TagSerializer for tags
+    categories = CategorySerializer(many=True, required=False)
+    tags = TagSerializer(many=True, required=False)
 
     class Meta:
         model = Product
@@ -35,7 +35,7 @@ class ProductSerializer(serializers.ModelSerializer):
             'description',
             'price',
             'stock',
-            'category',
+            'categories',
             'tags',
             'user'
         ]
@@ -62,37 +62,48 @@ class ProductSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         """Create a product."""
         user = self.context['request'].user
-        category_name = validated_data.pop('category')
-        tags = validated_data.pop('tags')
+        categories_data = validated_data.pop('categories', [])
+        tags_data = validated_data.pop('tags', [])
         validated_data.pop('user', None)
 
-        category, created = self._get_or_create_category(category_name, user)
-        tag_objs = self._get_or_create_tags(tags, user)
-
         product = Product.objects.create(
-            category=category,
             user=user,
             **validated_data
         )
-        product.tags.set(tag_objs)
+        self._create_or_update_categories(product, categories_data)
+        self._create_or_update_tags(product, tags_data)
         return product
 
     def update(self, instance, validated_data):
-        tags = validated_data.pop('tags', None)
-        category_name = validated_data.pop('category', None)
-        if tags is not None:
+        categories_data = validated_data.pop('categories', None)
+        tags_data = validated_data.pop('tags', None)
+        if categories_data is not None:
+            instance.categories.clear()
+            self._create_or_update_categories(instance, categories_data)
+        if tags_data is not None:
             instance.tags.clear()
-            tag_objs = self._get_or_create_tags(tags, instance.user)
-            instance.tags.set(tag_objs)
-        if category_name is not None:
-            category, created = self._get_or_create_category(
-                category_name,
-                instance.user
-            )
-            instance.category = category
+            self._create_or_update_tags(instance, tags_data)
 
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
 
         instance.save()
         return instance
+
+    def _create_or_update_categories(self, product, categories_data):
+        """Handle creating or updating categories"""
+        for category_data in categories_data:
+            category, created = Category.objects.get_or_create(
+                name=category_data['name'],
+                defaults={'user': self.context['request'].user}
+            )
+            product.categories.add(category)
+
+    def _create_or_update_tags(self, product, tags_data):
+        """Handle creating or updating tags"""
+        for tag_data in tags_data:
+            tag, created = Tag.objects.get_or_create(
+                name=tag_data['name'],
+                defaults={'user': self.context['request'].user}
+            )
+            product.tags.add(tag)

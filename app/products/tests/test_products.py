@@ -22,27 +22,29 @@ def detail_url(product_id):
 
 def create_product(user, **params):
     """Create and return a sample product."""
-    category, created = Category.objects.get_or_create(
-        name="Sample Category",
-        defaults={"user": user}
-    )
-
-    tag, created = Tag.objects.get_or_create(
-        name="Sample Tag",
-        defaults={"user": user}
-    )
-
     defaults = {
         'name': 'Sample Product',
         'description': 'Sample description',
         'price': Decimal('99.99'),
         'stock': 5,
-        'category': category,
     }
     defaults.update(params)
 
     product = Product.objects.create(user=user, **defaults)
-    product.tags.set([tag])
+
+    if 'category' in params:
+        category, created = Category.objects.get_or_create(
+            name=params['category'],
+            defaults={"user": user}
+        )
+        product.categories.add(category)
+
+    if 'tags' in params:
+        tags = [Tag.objects.get_or_create(
+            name=tag['name'], defaults={"user": user}
+        )[0] for tag in params['tags']]
+        product.tags.set(tags)
+
     return product
 
 
@@ -148,7 +150,13 @@ class PrivateProductAPITests(TestCase):
         self.assertEqual(product.user, self.user)
         self.assertTrue(
             set([tag.name for tag in product.tags.all()]).issubset(
-                set([tag['name'] for tag in payload['tags']]))
+                set([tag['name'] for tag in payload['tags']])),
+        )
+        self.assertTrue(
+            set(
+                [category.name for category in product.categories.all()]
+            ).issubset(
+                set([payload['category']])),
         )
 
     def test_partial_update(self):
@@ -190,10 +198,15 @@ class PrivateProductAPITests(TestCase):
             if k in ['category', 'tags']:
                 continue
             self.assertEqual(getattr(product, k), v)
-        self.assertEqual(product.category.name, payload['category'])
+        self.assertTrue(
+            set(
+                [category.name for category in product.categories.all()]
+            ).issubset(
+                set([payload['category']])),
+        )
         self.assertTrue(
             set([tag.name for tag in product.tags.all()]).issubset(
-                set([tag['name'] for tag in payload['tags']]))
+                set([tag['name'] for tag in payload['tags']])),
         )
         self.assertEqual(product.user, self.user)
 
@@ -206,3 +219,43 @@ class PrivateProductAPITests(TestCase):
 
         self.assertEqual(res.status_code, status.HTTP_204_NO_CONTENT)
         self.assertFalse(Product.objects.filter(id=product.id).exists())
+
+    def test_user_cannot_access_other_users_products(self):
+        """Ensure a user cannot retrieve another user's product details."""
+        other_user = create_user(
+            email="other@example.com",
+            password="testpass123"
+        )
+        product = create_product(user=other_user)
+
+        url = detail_url(product.id)
+        res = self.client.get(url)
+
+        self.assertEqual(res.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_cannot_update_other_users_product(self):
+        """Ensure a user cannot update another user's product."""
+        other_user = create_user(
+            email="other@example.com",
+            password="testpass123"
+        )
+        product = create_product(user=other_user)
+
+        payload = {'name': 'Hacked Product'}
+        url = detail_url(product.id)
+        res = self.client.patch(url, payload)
+
+        self.assertEqual(res.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_cannot_delete_other_users_product(self):
+        """Ensure a user cannot delete another user's product."""
+        other_user = create_user(
+            email="other@example.com",
+            password="testpass123"
+        )
+        product = create_product(user=other_user)
+
+        url = detail_url(product.id)
+        res = self.client.delete(url)
+
+        self.assertEqual(res.status_code, status.HTTP_404_NOT_FOUND)

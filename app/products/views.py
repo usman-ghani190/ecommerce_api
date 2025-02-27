@@ -46,8 +46,15 @@ class TagViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        """Return tags for the authenticated user only"""
-        return self.queryset.filter(user=self.request.user).order_by('-name')
+        """Filter queryset to authenticated user and assigned tags"""
+        queryset = self.queryset.filter(user=self.request.user)
+        assigned_only = bool(self.request.query_params.get('assigned_only'))
+        if assigned_only:
+            queryset = queryset.filter(product__isnull=False).distinct()
+        return queryset
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
 
 
 class CategoryViewSet(viewsets.ModelViewSet):
@@ -56,3 +63,15 @@ class CategoryViewSet(viewsets.ModelViewSet):
     queryset = Category.objects.all()
     authentication_classes = [TokenAuthentication]
     permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        """Filter queryset to authenticated user and assigned categories"""
+        queryset = self.queryset.filter(user=self.request.user)
+        assigned_only = bool(self.request.query_params.get('assigned_only'))
+        if assigned_only:
+            queryset = queryset.filter(products__isnull=False).distinct()
+        return queryset
+
+    def perform_create(self, serializer):
+        """Create a new category"""
+        serializer.save(user=self.request.user)
