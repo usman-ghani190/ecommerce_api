@@ -4,7 +4,7 @@ from rest_framework import viewsets
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.permissions import IsAuthenticated
 
-from core.models import Category, Product, Tag
+from core.models import Cart, CartItem, Category, Product, Tag, Wishlist
 from products import serializers
 
 
@@ -74,4 +74,48 @@ class CategoryViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         """Create a new category"""
+        serializer.save(user=self.request.user)
+
+
+class CartViewSet(viewsets.ModelViewSet):
+    """Manage carts in the database."""
+    serializer_class = serializers.CartSerializer
+    queryset = Cart.objects.all()
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        """Return carts for the authenticated user only."""
+        return self.queryset.filter(user=self.request.user)
+
+    def perform_create(self, serializer):
+        """Create a new cart for the authenticated user."""
+        serializer.save(user=self.request.user)
+
+
+class CartItemViewSet(viewsets.ModelViewSet):
+    """Manage items in a user's cart."""
+    serializer_class = serializers.CartItemSerializer
+    queryset = CartItem.objects.all()
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        """Return cart items for the authenticated user's carts."""
+        return self.queryset.filter(cart__user=self.request.user)
+
+
+class WishlistViewSet(viewsets.ModelViewSet):
+    """Manage wishlists for users."""
+    serializer_class = serializers.WishlistSerializer
+    queryset = Wishlist.objects.all()
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        """Return wishlist for the authenticated user."""
+        return self.queryset.filter(user=self.request.user)
+
+    def perform_create(self, serializer):
+        """Create a wishlist for the authenticated user."""
         serializer.save(user=self.request.user)

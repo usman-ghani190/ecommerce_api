@@ -2,7 +2,36 @@
 
 from rest_framework import serializers
 
-from core.models import Category, Product, Tag
+from core.models import Cart, CartItem, Category, Product, Tag, Wishlist
+
+
+class CartItemSerializer(serializers.ModelSerializer):
+    product_name = serializers.CharField(
+        source='product.name',
+        read_only=True)
+
+    class Meta:
+        model = CartItem
+        fields = ['id', 'cart', 'product', 'product_name', 'quantity']
+
+
+class CartSerializer(serializers.ModelSerializer):
+    items = CartItemSerializer(
+        source='cartitem_set',
+        many=True, read_only=True)
+
+    class Meta:
+        model = Cart
+        fields = ['id', 'user', 'items']
+
+
+class WishlistSerializer(serializers.ModelSerializer):
+    products = serializers.PrimaryKeyRelatedField(
+        queryset=Product.objects.all(), many=True)
+
+    class Meta:
+        model = Wishlist
+        fields = ['id', 'user', 'products']
 
 
 class TagSerializer(serializers.ModelSerializer):
