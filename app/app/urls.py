@@ -19,6 +19,8 @@ from django.conf import settings
 from django.contrib import admin
 from django.urls import include, path
 from django.conf.urls.static import static
+from products.views import stripe_webhook
+
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/schema', SpectacularAPIView.as_view(), name='api_schema'),
@@ -26,6 +28,7 @@ urlpatterns = [
         url_name='api_schema'), name='api_docs'),
     path('api/user', include('user.urls')),
     path('api/products/', include('products.urls')),
+    path('webhooks/stripe/', stripe_webhook, name='stripe-webhook'),
 ]
 
 if settings.DEBUG:
