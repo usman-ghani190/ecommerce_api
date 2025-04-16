@@ -203,9 +203,9 @@ def stripe_webhook(request):
     # Handle the event
     if event['type'] == 'payment_intent.succeeded':
         payment_intent = event['data']['object']
-        print('💰 Payment succeeded:', payment_intent['id'])
+        print('Payment succeeded:', payment_intent['id'])
         # TODO: mark order as paid in your database
     elif event['type'] == 'payment_intent.payment_failed':
-        print('❌ Payment failed')
+        print('Payment failed')
 
     return HttpResponse(status=200)
